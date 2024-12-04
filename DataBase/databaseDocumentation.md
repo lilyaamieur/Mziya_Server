@@ -224,6 +224,121 @@ For each table/collection:
 | review_text   | TEXT          | Review content                     | NULL                                |
 | created_at    | TIMESTAMP     | Rating creation timestamp          | DEFAULT CURRENT_TIMESTAMP           |
 
+### Table Creation Scripts
+
+```sql
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL, -- encrypted password
+    --role ENUM('worker', 'home_owner') NOT NULL, -- to differentiate between clients and service providers
+    phone VARCHAR(15) UNIQUE NOT NULL,
+    address TEXT,
+    profile_picture BLOB,
+    national_id VARCHAR(20) --optional
+    verified BOOLEAN DEFAULT FALSE, -- whether the user is verified or not
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+CREATE TABLE jobs (
+    id SERIAL PRIMARY KEY,
+    home_owner_id INT REFERENCES users(id) ON DELETE CASCADE, -- home owner
+    description TEXT,
+    location VARCHAR(255),
+    job_type job_type ,
+    job_category  NOT NULL,
+    budget INT,
+    status job_status DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE home_owner (
+    job_id INT REFERENCES jobs(id) ON DELETE CASCADE, -- foreign key reference to job post
+    user_id INT REFERENCES users(id) ON DELETE CASCADE, -- foreign key reference to users
+    PRIMARY KEY (job_id, user_id) -- composite primary key
+);
+CREATE TABLE job_applications (
+    id SERIAL PRIMARY KEY,
+    job_id INT REFERENCES jobs(id) ON DELETE CASCADE, -- from job_id we can get the home_owner id
+    worker_id INT REFERENCES users(id) ON DELETE CASCADE, --worker
+    application_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status application_status DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE workers (
+    application_id INT REFERENCES job_applications(id) ON DELETE CASCADE, -- foreign key reference to job application
+    user_id INT REFERENCES users(id) ON DELETE CASCADE, -- foreign key reference to users
+    PRIMARY KEY (application_id, user_id) -- composite primary key
+    skills TEXT[],  -- array of skills worker offers
+);
+CREATE TABLE job_contract (
+    id SERIAL PRIMARY KEY,
+    job_id INT REFERENCES jobs(id) ON DELETE CASCADE,
+    application_id INT job_applications(id) ON DELETE CASCADE, -- part of the   worker_id
+    user_worker_id INT NOT NULL,    --should i do it FOREIGN KEY users(id) ON DELETE CASCADE  -- part of the   worker_id
+    FOREIGN KEY (application_id, user_worker_id) REFERENCES workers(application_id, user_id) ON DELETE CASCADE --worker id is foreign key
+    user_home_owner_id INT NOT NULL, --should i do it FOREIGN KEY users(id) ON DELETE CASCADE part of the home_owner_id
+    FOREIGN KEY (job_id, user_home_owner_id) REFERENCES home_owner(job_id, user_id) ON DELETE CASCADE, --home owner id is foreign key
+    acceptation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, --accept the application
+    start_date TIMESTAMP,
+    end_date TIMESTAMP,
+    payment_id INT REFERENCES payments(id) ON DELETE CASCADE,
+    terms TEXT,
+    conditions TEXT,  -- terms and conditions for the contract
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+);
+-- the home owner assign the work
+CREATE TABLE payments (
+    id SERIAL PRIMARY KEY,
+    job_contract_id INT REFERENCES job_contract(id),
+    payment_status  DEFAULT 'pending',
+    amount DECIMAL(10, 2),
+    payment_method  DEFAULT 'card',
+    transaction_date TIMESTAMP DEFAULT NOW()
+);
+CREATE TABLE notifications (
+    id SERIAL PRIMARY KEY,
+    user_id INT REFERENCES users(id) ON DELETE CASCADE,
+    notification_text TEXT,
+    notification_type ,
+    read_status BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE reviews_worker (
+    id INT PRIMARY KEY,
+    assigment_id INT REFERENCES job_contract(id) ON DELETE CASCADE,
+    reviewer_id INT REFERENCES job_contract(user_home_owner_id) ON DELETE CASCADE,
+    rating DECIMAL(3, 2) CHECK (rating >= 0 AND rating <= 5),  -- Rating out of 5
+    review_text TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE rating_homeowner(
+    id SERIAL PRIMARY KEY,
+    assigment_id INT REFERENCES job_contract(id) ON DELETE CASCADE,
+    reviewer_id INT REFERENCES job_contract(user_home_owner_id) ON DELETE CASCADE,
+    rating DECIMAL(3, 2) CHECK (rating >= 0 AND rating <= 5),  -- Rating out of 5
+     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE reviews_worker (
+    id INT PRIMARY KEY,
+    assigment_id INT REFERENCES job_contract(id) ON DELETE CASCADE,
+    reviewer_id INT REFERENCES job_contract( user_worker_id) ON DELETE CASCADE,
+    rating DECIMAL(3, 2) CHECK (rating >= 0 AND rating <= 5),  -- Rating out of 5
+    review_text TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE rating_worker(
+    id SERIAL PRIMARY KEY,
+    assigment_id INT REFERENCES job_contract(id) ON DELETE CASCADE,
+    reviewer_id INT REFERENCES job_contract( user_worker_id) ON DELETE CASCADE,
+    rating DECIMAL(3, 2) CHECK (rating >= 0 AND rating <= 5),  -- Rating out of 5
+     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
 ### Relationships
 
 -A user can be either a home_owner or a worker or both
@@ -283,24 +398,49 @@ INSERT INTO jobs (home_owner_id, description, location, job_type, job_category, 
 VALUES (:home_owner_id, :description, :location, :job_type, :job_category, :budget, :status)
 RETURNING id;
 -- job_application
-
+INSERT INTO job_applications (job_id, worker_id, application_date, status)
+VALUES (:job_id, :worker_id, :application_date, :status)
+RETURNING id;
 --job_contract
+INSERT INTO job_contract (job_id, application_id, user_worker_id, user_home_owner_id, acceptation_date, start_date, end_date, payment_id, terms, conditions)
+VALUES (:job_id, :application_id, :user_worker_id, :user_home_owner_id, :acceptation_date, :start_date, :end_date, :payment_id, :terms, :conditions)
+RETURNING id;
 
 --home_owner
+INSERT INTO home_owner (job_id, user_id)
+VALUES (:job_id, :user_id);
 
 -- workers
-
+INSERT INTO workers (application_id, user_id, skills)
+VALUES (:application_id, :user_id, :skills);
 --payments
+INSERT INTO payments (job_contract_id, payment_status, amount, payment_method, transaction_date)
+VALUES (:job_contract_id, :payment_status, :amount, :payment_method, :transaction_date)
+RETURNING id;
 
 --notifications
+INSERT INTO notifications (user_id, notification_text, notification_type, read_status)
+VALUES (:user_id, :notification_text, :notification_type, :read_status)
+RETURNING id;
 
 --reviews_homeowner
+INSERT INTO reviews_worker (id, assigment_id, reviewer_id, rating, review_text)
+VALUES (:id, :assigment_id, :reviewer_id, :rating, :review_text)
+RETURNING id;
 
 --rating_homeowner
+INSERT INTO rating_homeowner (assigment_id, reviewer_id, rating)
+VALUES (:assigment_id, :reviewer_id, :rating)
+RETURNING id;
 
 --reviews_worker
-
+INSERT INTO reviews_worker (id, assigment_id, reviewer_id, rating, review_text)
+VALUES (:id, :assigment_id, :reviewer_id, :rating, :review_text)
+RETURNING id;
 --rating_worker
+INSERT INTO rating_worker (assigment_id, reviewer_id, rating)
+VALUES (:assigment_id, :reviewer_id, :rating)
+RETURNING id;
 
 
 ```
@@ -318,8 +458,8 @@ SELECT * FROM users WHERE address = :address;
 SELECT * FROM users WHERE national_id = :national_id;
 SELECT * FROM users WHERE verified = :verified;
 SELECT * FROM users WHERE profile_picture = :profile_picture;
-
--- job
+-----------------------------------------------------------------------
+-- job--
 -- 1. Select Job by ID
 SELECT * FROM jobs WHERE id = :id;
 
@@ -349,27 +489,163 @@ SELECT * FROM jobs WHERE created_at = :created_at;
 
 -- 10. Select Job by Update Date
 SELECT * FROM jobs WHERE updated_at = :updated_at;
-
+------------------------------------------------
 -- job_application
+-- Select Job Applications by ID
+SELECT * FROM job_applications WHERE id = :id;
 
+-- Select Job Applications by Job ID
+SELECT * FROM job_applications WHERE job_id = :job_id;
+
+-- Select Job Applications by Worker ID
+SELECT * FROM job_applications WHERE worker_id = :worker_id;
+
+-- Select Job Applications by Application Date
+SELECT * FROM job_applications WHERE application_date = :application_date;
+
+-- Select Job Applications by Status
+SELECT * FROM job_applications WHERE status = :status;
+
+-- Select Job Applications by Creation Date
+SELECT * FROM job_applications WHERE created_at = :created_at;
+
+-- Select Job Applications by Update Date
+SELECT * FROM job_applications WHERE updated_at = :updated_at;
+
+----------------------------------------------------
 --job_contract
+-- Select Job Contract by ID
+SELECT * FROM job_contract WHERE id = :id;
 
+-- Select Job Contract by Job ID
+SELECT * FROM job_contract WHERE job_id = :job_id;
+
+-- Select Job Contract by Application ID
+SELECT * FROM job_contract WHERE application_id = :application_id;
+
+-- Select Job Contract by Worker User ID
+SELECT * FROM job_contract WHERE user_worker_id = :user_worker_id;
+
+-- Select Job Contract by Home Owner User ID
+SELECT * FROM job_contract WHERE user_home_owner_id = :user_home_owner_id;
+
+-- Select Job Contract by Start Date
+SELECT * FROM job_contract WHERE start_date = :start_date;
+
+-- Select Job Contract by End Date
+SELECT * FROM job_contract WHERE end_date = :end_date;
+
+-- Select Job Contract by Payment ID
+SELECT * FROM job_contract WHERE payment_id = :payment_id;
+
+-- Select Job Contract by Creation Date
+SELECT * FROM job_contract WHERE created_at = :created_at;
+----------------------------------------------------
 --home_owner
-
+-- Select Home Owner by Job ID
+SELECT * FROM home_owner WHERE job_id = :job_id;
+-- Select Home Owner by User ID
+SELECT * FROM home_owner WHERE user_id = :user_id;
+---------------------------------------------------------------
 -- workers
+-- Select Workers by Application ID
+SELECT * FROM workers WHERE application_id = :application_id;
 
+-- Select Workers by User ID
+SELECT * FROM workers WHERE user_id = :user_id;
+
+-- Select Workers by Skills
+SELECT * FROM workers WHERE skills @> ARRAY[:skill]; -- Matches workers with a specific skill
+---------------------------------------------------------------
 --payments
+-- Select Payments by ID
+SELECT * FROM payments WHERE id = :id;
 
+-- Select Payments by Job Contract ID
+SELECT * FROM payments WHERE job_contract_id = :job_contract_id;
+
+-- Select Payments by Status
+SELECT * FROM payments WHERE payment_status = :payment_status;
+
+-- Select Payments by Amount
+SELECT * FROM payments WHERE amount = :amount;
+
+-- Select Payments by Payment Method
+SELECT * FROM payments WHERE payment_method = :payment_method;
+
+-- Select Payments by Transaction Date
+SELECT * FROM payments WHERE transaction_date = :transaction_date;
+------------------------------------------------------------------
 --notifications
+-- Select Notifications by ID
+SELECT * FROM notifications WHERE id = :id;
 
---reviews_homeowner
+-- Select Notifications by User ID
+SELECT * FROM notifications WHERE user_id = :user_id;
 
---rating_homeowner
+-- Select Notifications by Type
+SELECT * FROM notifications WHERE notification_type = :notification_type;
 
+-- Select Notifications by Read Status
+SELECT * FROM notifications WHERE read_status = :read_status;
+
+-- Select Notifications by Creation Date
+SELECT * FROM notifications WHERE created_at = :created_at;
+-------------------------------------------------------------------
 --reviews_worker
+-- Select Reviews Worker by ID
+SELECT * FROM reviews_worker WHERE id = :id;
 
+-- Select Reviews Worker by Assignment ID
+SELECT * FROM reviews_worker WHERE assigment_id = :assigment_id;
+
+-- Select Reviews Worker by Reviewer ID
+SELECT * FROM reviews_worker WHERE reviewer_id = :reviewer_id;
+
+-- Select Reviews Worker by Rating
+SELECT * FROM reviews_worker WHERE rating = :rating;
+
+-- Select Reviews Worker by Creation Date
+SELECT * FROM reviews_worker WHERE created_at = :created_at;
+-------------------------------------------------------------------
 --rating_worker
+-- Select Rating Worker by Assignment ID
+SELECT * FROM rating_worker WHERE assigment_id = :assigment_id;
 
+-- Select Rating Worker by Reviewer ID
+SELECT * FROM rating_worker WHERE reviewer_id = :reviewer_id;
+
+-- Select Rating Worker by Rating
+SELECT * FROM rating_worker WHERE rating = :rating;
+
+-- Select Rating Worker by Creation Date
+SELECT * FROM rating_worker WHERE created_at = :created_at;
+-----------------------------------------------------------------
+--reviews_homeowner
+-- Select Rating Homeowner by Assignment ID
+SELECT * FROM rating_homeowner WHERE assigment_id = :assigment_id;
+
+-- Select Rating Homeowner by Reviewer ID
+SELECT * FROM rating_homeowner WHERE reviewer_id = :reviewer_id;
+
+-- Select Rating Homeowner by Rating
+SELECT * FROM rating_homeowner WHERE rating = :rating;
+
+-- Select Rating Homeowner by Creation Date
+SELECT * FROM rating_homeowner WHERE created_at = :created_at;
+---------------------------------------------------------------------------
+--rating_homeowner
+-- Select Rating Homeowner by Assignment ID
+SELECT * FROM rating_homeowner WHERE assigment_id = :assigment_id;
+
+-- Select Rating Homeowner by Reviewer ID
+SELECT * FROM rating_homeowner WHERE reviewer_id = :reviewer_id;
+
+-- Select Rating Homeowner by Rating
+SELECT * FROM rating_homeowner WHERE rating = :rating;
+
+-- Select Rating Homeowner by Creation Date
+SELECT * FROM rating_homeowner WHERE created_at = :created_at;
 
 ```
 
@@ -543,24 +819,226 @@ SET id = :id,
     updated_at = NOW()
 WHERE updated_at = :updated_at;
 -- job_application
+-- 1. Update Job Application by ID
+UPDATE job_applications
+SET job_id = :job_id,
+    worker_id = :worker_id,
+    application_date = :application_date,
+    status = :status,
+    updated_at = NOW()
+WHERE id = :id;
 
+-- 2. Update Job Application by Job ID
+UPDATE job_applications
+SET id = :id,
+    worker_id = :worker_id,
+    application_date = :application_date,
+    status = :status,
+    updated_at = NOW()
+WHERE job_id = :job_id;
+
+-- 3. Update Job Application by Worker ID
+UPDATE job_applications
+SET id = :id,
+    job_id = :job_id,
+    application_date = :application_date,
+    status = :status,
+    updated_at = NOW()
+WHERE worker_id = :worker_id;
+
+-----------------------------------------
 --job_contract
+-- 1. Update Job Contract by ID
+UPDATE job_contract
+SET job_id = :job_id,
+    worker_id = :worker_id,
+    home_owner_id = :home_owner_id,
+    contract_status = :contract_status,
+    contract_start_date = :contract_start_date,
+    contract_end_date = :contract_end_date,
+    updated_at = NOW()
+WHERE id = :id;
 
+-- 2. Update Job Contract by Job ID
+UPDATE job_contract
+SET id = :id,
+    worker_id = :worker_id,
+    home_owner_id = :home_owner_id,
+    contract_status = :contract_status,
+    contract_start_date = :contract_start_date,
+    contract_end_date = :contract_end_date,
+    updated_at = NOW()
+WHERE job_id = :job_id;
+
+-- 3. Update Job Contract by Worker ID
+UPDATE job_contract
+SET id = :id,
+    job_id = :job_id,
+    home_owner_id = :home_owner_id,
+    contract_status = :contract_status,
+    contract_start_date = :contract_start_date,
+    contract_end_date = :contract_end_date,
+    updated_at = NOW()
+WHERE worker_id = :worker_id;
+
+-- 4. Update Job Contract by Home Owner ID
+UPDATE job_contract
+SET id = :id,
+    job_id = :job_id,
+    worker_id = :worker_id,
+    contract_status = :contract_status,
+    contract_start_date = :contract_start_date,
+    contract_end_date = :contract_end_date,
+    updated_at = NOW()
+WHERE home_owner_id = :home_owner_id;
+
+-- 5. Update Job Contract by Contract Status
+UPDATE job_contract
+SET id = :id,
+    job_id = :job_id,
+    worker_id = :worker_id,
+    home_owner_id = :home_owner_id,
+    contract_start_date = :contract_start_date,
+    contract_end_date = :contract_end_date,
+    updated_at = NOW()
+WHERE contract_status = :contract_status;
+
+-- 6. Update Job Contract by Contract Start Date
+UPDATE job_contract
+SET id = :id,
+    job_id = :job_id,
+    worker_id = :worker_id,
+    home_owner_id = :home_owner_id,
+    status = :status,
+    contract_end_date = :contract_end_date,
+    updated_at = NOW()
+WHERE start_date = :contract_start_date;
+
+-- 7. Update Job Contract by Contract End Date
+-- 1. Update Job Contract by ID
+UPDATE job_contract
+SET job_id = :job_id,
+    application_id = :application_id,
+    user_worker_id = :user_worker_id,
+    user_home_owner_id = :user_home_owner_id,
+    acceptation_date = :acceptation_date,
+    start_date = :start_date,
+    end_date = :end_date,
+    payment_id = :payment_id,
+    terms = :terms,
+    conditions = :conditions,
+    updated_at = NOW()
+WHERE id = :id;
+
+-- 2. Update Job Contract by Job ID
+UPDATE job_contract
+SET id = :id,
+    application_id = :application_id,
+    user_worker_id = :user_worker_id,
+    user_home_owner_id = :user_home_owner_id,
+    acceptation_date = :acceptation_date,
+    start_date = :start_date,
+    end_date = :end_date,
+    payment_id = :payment_id,
+    terms = :terms,
+    conditions = :conditions,
+WHERE job_id = :job_id;
 --home_owner
-
+UPDATE home_owner
+SET user_id = :user_id,
+WHERE job_id = :job_id;
+-- 2. Update Home Owner by User ID
+UPDATE home_owner
+SET job_id = :job_id,
+WHERE user_id = :user_id;
+-----------------------------------------
 -- workers
+UPDATE workers
+-- 1. Update Worker by Application ID
+UPDATE workers
+SET user_id = :user_id,
+    skills = :skills,
+WHERE application_id = :application_id;
 
+-- 2. Update Worker by User ID
+UPDATE workers
+SET application_id = :application_id,
+    skills = :skills,
+    updated_at = NOW()
+WHERE user_id = :user_id;
+
+---------------------------------
 --payments
+-- 1. Update Payment by ID
+UPDATE payments
+SET job_contract_id = :job_contract_id,
+    payment_status = :payment_status,
+    amount = :amount,
+    payment_method = :payment_method,
+    transaction_date = :transaction_date,
+    updated_at = NOW()
+WHERE id = :id;
 
+-- 2. Update Payment by Job Contract ID
+UPDATE payments
+SET id = :id,
+    payment_status = :payment_status,
+    amount = :amount,
+    payment_method = :payment_method,
+    transaction_date = :transaction_date,
+    updated_at = NOW()
+WHERE job_contract_id = :job_contract_id;
 --notifications
+-- 1. Update Notification by ID
+UPDATE notifications
+SET user_id = :user_id,
+    notification_text = :notification_text,
+    notification_type = :notification_type,
+    read_status = :read_status,
+WHERE id = :id;
+
+-- 2. Update Notification by User ID
+UPDATE notifications
+SET id = :id,
+    notification_text = :notification_text,
+    notification_type = :notification_type,
+    read_status = :read_status,
+WHERE user_id = :user_id;
 
 --reviews_homeowner
-
 --rating_homeowner
 
 --reviews_worker
+-- 1. Update Reviews Worker by ID
+UPDATE reviews_worker
+SET assigment_id = :assigment_id,
+    reviewer_id = :reviewer_id,
+    rating = :rating,
+    review_text = :review_text,
+WHERE id = :id;
 
+-- 2. Update Reviews Worker by Assignment ID
+UPDATE reviews_worker
+SET id = :id,
+    reviewer_id = :reviewer_id,
+    rating = :rating,
+    review_text = :review_text,
+WHERE assigment_id = :assigment_id;
 --rating_worker
+-- 1. Update Rating Worker by ID
+UPDATE rating_worker
+SET assigment_id = :assigment_id,
+    reviewer_id = :reviewer_id,
+    rating = :rating,
+WHERE id = :id;
+
+-- 2. Update Rating Worker by Assignment ID
+UPDATE rating_worker
+SET id = :id,
+    reviewer_id = :reviewer_id,
+    rating = :rating,
+WHERE assigment_id = :assigment_id;
+
 
 ```
 
@@ -625,28 +1103,73 @@ DELETE FROM jobs WHERE created_at = :created_at;
 
 -- 10. Delete Job by Update Date
 DELETE FROM jobs WHERE updated_at = :updated_at;
-
-
-
 -- job_application
+-- 1. Delete Job Application by ID
+DELETE FROM job_applications WHERE id = :id;
+
+-- 2. Delete Job Application by Job ID
+DELETE FROM job_applications WHERE job_id = :job_id;
+
+-- 3. Delete Job Application by Worker ID
+DELETE FROM job_applications WHERE worker_id = :worker_id;
 
 --job_contract
+-- 1. Delete Job Contract by ID
+DELETE FROM job_contract WHERE id = :id;
+
+-- 2. Delete Job Contract by Job ID
+DELETE FROM job_contract WHERE job_id = :job_id;
 
 --home_owner
+-- 1. Delete Home Owner by Job ID
+DELETE FROM home_owner WHERE job_id = :job_id;
+
+-- 2. Delete Home Owner by User ID
+DELETE FROM home_owner WHERE user_id = :user_id;
 
 -- workers
+-- 1. Delete Worker by Application ID
+DELETE FROM workers WHERE application_id = :application_id;
+
+-- 2. Delete Worker by User ID
+DELETE FROM workers WHERE user_id = :user_id;
 
 --payments
+-- 1. Delete Payment by ID
+DELETE FROM payments WHERE id = :id;
 
+-- 2. Delete Payment by Job Contract ID
+DELETE FROM payments WHERE job_contract_id = :job_contract_id;
 --notifications
+-- 1. Delete Notification by ID
+DELETE FROM notifications WHERE id = :id;
+
+-- 2. Delete Notification by User ID
+DELETE FROM notifications WHERE user_id = :user_id;
 
 --reviews_homeowner
 
 --rating_homeowner
+-- 1. Delete Rating Worker by ID
+DELETE FROM rating_homeowner WHERE id = :id;
+
+-- 2. Delete Rating Worker by Assignment ID
+DELETE FROM rating_homeowner WHERE assigment_id = :assigment_id;
 
 --reviews_worker
+-- 1. Delete Review Worker by ID
+DELETE FROM reviews_worker WHERE id = :id;
+
+-- 2. Delete Review Worker by Assignment ID
+DELETE FROM reviews_worker WHERE assigment_id = :assigment_id;
 
 --rating_worker
+-- 1. Delete Rating Worker by ID
+DELETE FROM rating_worker WHERE id = :id;
+
+-- 2. Delete Rating Worker by Assignment ID
+DELETE FROM rating_worker WHERE assigment_id = :assigment_id;
+
 
 ```
 
