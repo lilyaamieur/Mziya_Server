@@ -1,0 +1,37 @@
+--payments
+INSERT INTO payments (job_contract_id, payment_status, amount, payment_method, transaction_date)
+VALUES (:job_contract_id, :payment_status, :amount, :payment_method, :transaction_date)
+RETURNING id;
+--payments
+-- 1. Update Payment by ID
+UPDATE payments
+SET job_contract_id = :job_contract_id,
+    payment_status = :payment_status,
+    amount = :amount,
+    payment_method = :payment_method,
+    transaction_date = :transaction_date,
+    updated_at = NOW()
+WHERE id = :id;
+
+-- 2. Update Payment by Job Contract ID
+UPDATE payments
+SET id = :id,
+    payment_status = :payment_status,
+    amount = :amount,
+    payment_method = :payment_method,
+    transaction_date = :transaction_date,
+    updated_at = NOW()
+WHERE job_contract_id = :job_contract_id;
+
+--payments
+-- 1. Delete Payment by ID
+DELETE FROM payments WHERE id = :id;
+
+-- 2. Delete Payment by Job Contract ID
+DELETE FROM payments WHERE job_contract_id = :job_contract_id;
+--notifications
+-- 1. Delete Notification by ID
+DELETE FROM notifications WHERE id = :id;
+
+-- 2. Delete Notification by User ID
+DELETE FROM notifications WHERE user_id = :user_id;

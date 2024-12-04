@@ -1,0 +1,32 @@
+--reviews_homeowner
+INSERT INTO reviews_worker (id, assigment_id, reviewer_id, rating, review_text)
+VALUES (:id, :assigment_id, :reviewer_id, :rating, :review_text)
+RETURNING id;
+
+--reviews_worker
+INSERT INTO reviews_worker (id, assigment_id, reviewer_id, rating, review_text)
+VALUES (:id, :assigment_id, :reviewer_id, :rating, :review_text)
+RETURNING id;
+--reviews_worker
+-- 1. Update Reviews Worker by ID
+UPDATE reviews_worker
+SET assigment_id = :assigment_id,
+    reviewer_id = :reviewer_id,
+    rating = :rating,
+    review_text = :review_text,
+WHERE id = :id;
+
+-- 2. Update Reviews Worker by Assignment ID
+UPDATE reviews_worker
+SET id = :id,
+    reviewer_id = :reviewer_id,
+    rating = :rating,
+    review_text = :review_text,
+WHERE assigment_id = :assigment_id;
+
+--reviews_worker
+-- 1. Delete Review Worker by ID
+DELETE FROM reviews_worker WHERE id = :id;
+
+-- 2. Delete Review Worker by Assignment ID
+DELETE FROM reviews_worker WHERE assigment_id = :assigment_id;
