@@ -2,6 +2,7 @@
 const express = require('express');
 const cors = require('cors');
 const authRoutes = require('./routes/authRoutes');
+const jobRoutes = require('./routes/jobRoutes');
 require('dotenv').config();
 
 const app = express();
@@ -12,7 +13,7 @@ app.use(express.json());
 
 // Routes
 app.use('/api/auth', authRoutes);
-
+app.use('/api/jobs', jobRoutes);
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);

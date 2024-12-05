@@ -1,59 +1,90 @@
-const { DataTypes } = require("sequelize");
-const db = require("../condig/database");
+const supabase = require('../config/database');
 
-// the define function is used to define the model that represents the database
-// the model is mapped to to job table in postgreSQL database
-// Job is the name of the model
-const Job = db.define(
-  "Job",
-  {
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true,
-    },
-    home_owner_id: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
-    description: {
-      type: DataTypes.TEXT,
-      allowNull: true,
-    },
-    location: {
-      type: DataTypes.STRING(255),
-      allowNull: true,
-    },
-    job_type: {
-      type: DataTypes.ENUM("small", "large"),
-      allowNull: false,
-    },
-    job_category: {
-      type: DataTypes.ENUM("plumbing", "electrical", "carpentry", "other"),
-      allowNull: false,
-    },
-    budget: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-    },
-    status: {
-      type: DataTypes.ENUM("pending", "approved", "completed"),
-      defaultValue: "pending",
-    },
-    created_at: {
-      type: DataTypes.DATE,
-      defaultValue: DataTypes.NOW,
-    },
-    updated_at: {
-      type: DataTypes.DATE,
-      defaultValue: DataTypes.NOW,
-    },
-  },
-  {
-    tableName: "jobs",
-    timestamps: false, // If using manual timestamps
+class Job {
+  // Create a new job
+  static async create(jobData) {
+    const {
+      home_owner_id,
+      description,
+      location,
+      job_type,
+      job_category,
+      budget,
+      status = "pending", // Default to "pending"
+    } = jobData;
+
+    const { data, error } = await supabase
+      .from('jobs')
+      .insert([{
+        home_owner_id,
+        description,
+        location,
+        job_type,
+        job_category,
+        budget,
+        status, // Default status if not provided
+        created_at: new Date(), // Set creation date
+        updated_at: new Date(), // Set updated date
+      }])
+      .select();
+
+    if (error) {
+      console.error("Error creating job:", error);
+      throw error;
+    }
+
+    return data[0];
   }
-);
+
+  // Find a job by ID
+  static async findById(id) {
+    const { data, error } = await supabase
+      .from('jobs')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error("Error finding job:", error);
+      return null;
+    }
+
+    return data;
+  }
+
+  // Update a job by ID
+  static async update(id, updatedFields) {
+    const { data, error } = await supabase
+      .from('jobs')
+      .update({
+        ...updatedFields,
+        updated_at: new Date(), // Update the timestamp
+      })
+      .eq('id', id)
+      .select();
+
+    if (error) {
+      console.error("Error updating job:", error);
+      throw error;
+    }
+
+    return data[0];
+  }
+
+  // Delete a job by ID
+  static async delete(id) {
+    const { data, error } = await supabase
+      .from('jobs')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error("Error deleting job:", error);
+      throw error;
+    }
+
+    return data;
+  }
+}
 
 module.exports = Job;
-

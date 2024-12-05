@@ -1,8 +1,11 @@
-const exports = require("express");
-const router = express.Router();
-const { addJob} = require("../controllers/jobController");
+const express = require('express');
+const JobController = require('../controllers/jobController');
+const validateJobInput = require('../middleware/validatJobInput');
 
-// route for adding a new job
-router.post("/postJob", addJob);
+
+const router = express.Router();
+
+// Route to create a new job
+router.post('/addjob', JobController.addJob);
 
 module.exports = router;
