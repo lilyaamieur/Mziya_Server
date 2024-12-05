@@ -1,25 +1,16 @@
+// src/routes/authRoutes.js
 const express = require('express');
+const AuthController = require('../controllers/authController');
+const authMiddleware = require('../middleware/authMiddleware');
+
 const router = express.Router();
-const authController = require('../controllers/authController');
-const { validateSignup, validateLogin } = require('../middleware/validationMiddleware');
 
-// Signup route
-router.post('/signup', validateSignup, authController.signup);
+router.post('/signup', AuthController.signup);
+router.post('/login', AuthController.login);
 
-// Login route
-router.post('/login', validateLogin, authController.login);
-
-// Email verification route
-router.get('/verify/:token', authController.verifyEmail);
-
-// Forgot password route
-router.post('/forgot-password', authController.forgotPassword);
-
-// Password reset route
-router.post('/reset-password/:token', authController.resetPassword);
+// Example of a protected route
+router.get('/profile', authMiddleware, (req, res) => {
+  res.json({ user: req.user });
+});
 
 module.exports = router;
-
-
-
-
