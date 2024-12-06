@@ -6,6 +6,7 @@ CREATE TYPE application_status AS ENUM ('pending', 'accepted', 'rejected');
 CREATE TYPE payment_status AS ENUM ('pending', 'completed', 'failed');
 CREATE TYPE payment_method AS ENUM ('card', 'cash', 'wallet');
 CREATE TYPE notification_type AS ENUM ('assigment_update', 'job_offer', 'message', 'application');
+CREATE TYPE gender_type  AS ENUM ('male', 'female');
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -14,6 +15,7 @@ CREATE TABLE users (
     --role ENUM('worker', 'home_owner') NOT NULL, -- to differentiate between clients and service providers
     phone VARCHAR(15) UNIQUE NOT NULL,
     address TEXT,
+    gender gender_type,
     profile_picture BLOB,
     national_id VARCHAR(20) --optional
     verified BOOLEAN DEFAULT FALSE, -- whether the user is verified or not
@@ -29,8 +31,32 @@ CREATE TABLE jobs (
     job_category job_category NOT NULL,
     budget INT,
     status job_status DEFAULT 'pending',
+    availability_type VARCHAR(10) CHECK (availability_type IN ('open', 'closed')) NOT NULL,
+    start_date TIMESTAMP, -- Only for closed availability
+    end_date TIMESTAMP,   -- Only for closed availability
+    age_matters BOOLEAN DEFAULT FALSE, --if age matters
+    age_min INT, -- Minimum age (if applicable)
+    age_max INT, -- Maximum age (if applicable)
+    gender_matters BOOLEAN DEFAULT FALSE, -- if gender matters
+    required_gender VARCHAR(10) CHECK (required_gender IN ('male', 'female', 'any')),
+    additional_details TEXT -- Any other details about worker requirements
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+     CONSTRAINT check_availability_dates
+        CHECK (
+            (availability_type = 'closed' AND start_date IS NOT NULL AND end_date IS NOT NULL) OR
+            (availability_type = 'open' AND start_date IS NULL AND end_date IS NULL)
+        ),
+     CONSTRAINT check_age_details
+        CHECK (
+            (age_matters = FALSE) OR
+            (age_matters = TRUE AND age_min IS NOT NULL AND age_max IS NOT NULL)
+        ),
+      CONSTRAINT check_gender_details
+        CHECK (
+            (gender_matters = FALSE) OR
+            (gender_matters = TRUE AND required_gender IS NOT NULL)
+        )
 );
 CREATE TABLE home_owner (
     job_id INT REFERENCES jobs(id) ON DELETE CASCADE, -- foreign key reference to job post 
