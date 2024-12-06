@@ -1,0 +1,200 @@
+.SignUpContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+   
+  }
+  
+  .header {
+    text-align: center;
+    margin-bottom: 30px;
+  }
+  
+  .header h1 {
+    font-size: 32px;
+    color: #333;
+  }
+  
+  .header p {
+    font-size: 18px;
+    color: #555;
+  }
+  
+  .row {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 1200px;
+    margin-top: 20px;
+  }
+  
+  .col-md-6 {
+    width: 48%;
+    box-sizing: border-box;
+  
+  }
+  
+
+  .form-control {
+    width: 100%;
+    padding: 12px;
+    margin-right: 40px;
+    border-radius: 5px;
+    border: 0.2px solid #e9e9e9;
+    background-color: #f9f9f9d1;
+    /* box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); */
+  }
+  
+
+
+  .btn {
+
+    width: 80%;
+    padding: 12px;
+    background-color: #25323f;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+  }
+  
+  .btn:hover {
+    background-color: #374655;
+  }
+  
+  .mt-3 {
+    margin-top: 20px;
+    text-align: center;
+  }
+  
+  .mt-3 p {
+    color: #007bff;
+    cursor: pointer;
+    font-size: 16px;
+  }
+  
+  .mt-3 p:hover {
+    text-decoration: underline;
+  }
+  
+  .img-fluid {
+    width: 100%;
+    height: auto;
+    border-radius: 10px;
+  }
+
+
+
+  
+  input, button {
+    width: 100%; /* Full width inside container */
+    padding: 10px;
+    margin-bottom: 10px;
+    box-sizing: border-box; /* Includes padding in width */
+  }
+  
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #ffffff; /* Optional background */
+    overflow: hidden;
+  }
+
+ 
+  .genderClass {
+   
+    display: flex;
+    margin-top: 0;
+  }
+  
+  .gender-options {
+    display: flex;
+    gap: 40px; /* Adds space between the two labels */
+    align-items: center; /* Vertically centers the radio button and text */
+    margin-top: 0;
+  }
+  
+  .gender-options label {
+    display: flex;
+    align-items: center; /* Centers the radio button and the text horizontally */
+    margin-top: 0;
+  }
+  .gender-options label input{
+    margin: 0;
+  }
+  
+  span {
+    margin-right: 10px;
+    margin-left: 10px;
+  }
+
+  .genderClass h5 {
+    font-size: 14px; /* Adjust the font size */
+    color: #524f4f; /* Change the text color */
+    text-align: left; /* Align the text to the left */
+    margin: 0;
+  }
+  .dob-options {
+    display: flex;
+    gap: 10px; /* Adjust the space between elements (reduce this value for less gap) */
+    align-items: center; /* Ensures vertical alignment of the elements */
+    width: 100%; /* Ensures it takes up the full width available */
+  }
+  
+  .dob-options h5 {
+    font-size: 14px;
+    margin-right: 10px; /* Adds space between the heading and the select boxes */
+    flex-shrink: 0; /* Prevents the heading from shrinking */
+    color: #524f4f; /* Change the text color */
+  }
+  
+  .dob-options select {
+    width: auto; /* Set to auto to adjust based on content */
+    padding: 8px; /* Adjust padding for a cleaner look */
+    margin-right: 10px; /* Adds a smaller space between each select element */
+    border-radius: 5px; /* Adds rounded corners to the select boxes */
+  }
+
+
+
+  .form-container {
+    max-width: 400px; /* Adjust width */
+    margin: 0 auto; /* Centers horizontally */
+    padding: 20px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    max-height: 470px;
+    overflow-y: scroll; /* Enable vertical scrolling */
+    overflow-x: hidden; /* Hide horizontal scrolling, if any */
+  }
+  
+  /* Add this to customize scrollbar appearance (optional) */
+  .form-container::-webkit-scrollbar {
+    width: 8px; /* Width of the scrollbar */
+  }
+  
+
+
+  
+  .ERRR {
+    color: red;
+    font-size: 12px;
+    text-align: left; /* Ensures text is aligned to the left */
+    margin-top: 4px; /* Adds some space above the error message */
+    margin-bottom: 8px; /* Adds space below the error message */
+    width: 100%; /* Ensures it stretches across the input field */
+    display: block; /* Makes sure error messages appear on their own line */
+  }
+  .ErGender {
+    color: red;
+    font-size: 12px;
+    margin-top: 13px; /* Adds some space above the error message */
+    margin-bottom: 0px; /* Adds space below the error message */
+    width: 100%; /* Ensures it stretches across the input field */
+  
+  }
